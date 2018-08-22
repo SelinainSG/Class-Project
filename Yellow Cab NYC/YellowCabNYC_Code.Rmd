@@ -1,0 +1,125 @@
+---
+title: "Yellow Cab NYC"
+author: "Chang Wen-Chuan"
+date: "2018 Feb 23"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#import data
+taxi = data.frame(read.csv("clean_Finalized.csv", quote = "\""))
+class(taxi$tpep_pickup_datetime)
+
+# exclude outliner 
+taxi = subset(taxi,trip_distance < 200)
+taxi = subset(taxi,total_amount>=0)
+
+# adjust datatype
+#str(taxi)
+taxi$pickup_latitude<-as.numeric(taxi$pickup_latitude)
+taxi$RatecodeID<-as.factor(taxi$RatecodeID)
+taxi$fare_amount<-as.numeric(taxi$fare_amount)
+str(taxi)
+names_column<-names(taxi)
+
+# calculate all of the variance of factors
+#create vector for record
+year_record<-c()
+factor_record<-c()
+variance_record<-c()
+
+# calcualting loop
+a=min(taxi$year,na.rm = TRUE)
+b=max(taxi$year,na.rm = TRUE)
+ran<-c(a:b)
+
+
+for (i in ran){
+  cal<-subset(taxi,year==i)
+  for(j in 1:ncol(taxi)){
+    if (class(cal[,j])!="factor"){
+      t=var(cal[,j],na.rm = TRUE)
+      if(t!=0){
+        year_record<-append(year_record,i)
+        factor_record<-append(factor_record,names_column[j])
+        variance_record<-append(variance_record,t)
+      }else{
+        TRUE
+      }
+    }else{
+      TRUE
+    }
+  }
+}
+
+summary_measures=data.frame(factor_record,year_record,variance_record)
+colnames(summary_measures)<-c("item","year","variance")
+
+
+
+##ggplot
+library(ggplot2)
+
+ggplot(data=summary_measures)+geom_point(aes(x=year,y=variance,color=item))+labs(title="Variance",x="year")
+ggsave("TT.png")
+
+#draw interesting item
+summary_measures$item=as.factor(summary_measures$item)
+c<-c(levels(summary_measures$item))
+
+summary_measures<-summary_measures[order(summary_measures$year),]
+summary_measures<-summary_measures[order(summary_measures$item),]
+
+write.table(summary_measures,file="F:\\Selina\\Class\\(DS_MS)\\Project Á`¾ã²z\\Yellow Cab NYC\\Yellow CabNYCvariance_all.csv",sep=",",row.names=F, na = "NA")
+
+for (i in c){
+  u<-subset(summary_measures,item==i)
+  ggplot(data=u)+geom_point(aes(x=year,y=variance),size=5)+labs(title=i,x="yaer")+ylim(min(u$variance,0)*1.2, max(u$variance)*1.2)+theme()
+  ggsave(paste(i,".png"))
+} 
+
+#ANOVA Test 
+# ANOVA on passenger count pre-Uber
+group2009 <- taxi[taxi$year == 2009 ,'passenger_count']
+group2010 <- taxi[taxi$year == 2010 ,'passenger_count']
+
+combined_groups <- data.frame(cbind(group2009, group2010))
+combined_groups
+summary(combined_groups)
+
+stacked_groups <- stack(combined_groups)
+stacked_groups
+summary(stacked_groups)
+
+anova_results <- aov(values ~ ind, data = stacked_groups)
+summary(anova_results)
+
+# ANOVA on passenger count post-Uber
+group2011 <- taxi[taxi$year == 2011 ,'passenger_count']
+group2012 <- taxi[taxi$year == 2012 ,'passenger_count']
+group2013 <- taxi[taxi$year == 2013 ,'passenger_count']
+group2014 <- taxi[taxi$year == 2014 ,'passenger_count']
+group2015 <- taxi[taxi$year == 2015 ,'passenger_count']
+group2016 <- taxi[taxi$year == 2016 ,'passenger_count']
+
+combined_groups <- data.frame(cbind(group2011, group2012, group2013, group2014, group2015, group2016))
+combined_groups
+summary(combined_groups)
+
+stacked_groups <- stack(combined_groups)
+stacked_groups
+summary(stacked_groups)
+
+anova_results <- aov(values ~ ind, data = stacked_groups)
+summary(anova_results)
+
+
+
+```
+
